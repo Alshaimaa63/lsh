@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 
+extern char **environ;
+
 /*
   Function Declarations for builtin shell commands:
  */
@@ -24,19 +26,30 @@ int lsh_cd(char **args);
 int lsh_help(char **args);
 int lsh_exit(char **args);
 
+int lsh_pwd(char **args);
+int lsh_echo(char **args);
+int lsh_env(char **args);
+
+
 /*
   List of builtin commands, followed by their corresponding functions.
  */
 char *builtin_str[] = {
   "cd",
   "help",
-  "exit"
+  "exit", 
+  "pwd",
+  "echo",
+  "env"
 };
 
 int (*builtin_func[]) (char **) = {
   &lsh_cd,
   &lsh_help,
-  &lsh_exit
+  &lsh_exit,
+  &lsh_pwd, 
+  &lsh_echo,
+  &lsh_env
 };
 
 int lsh_num_builtins() {
@@ -94,6 +107,46 @@ int lsh_exit(char **args)
   return 0;
 }
 
+
+// the pwd command
+int lsh_pwd(char **args)
+{
+  char cwd[1024];
+  if(getcwd(cwd, sizeof(cwd)) != NULL)
+    printf("%s\n", cwd);
+  else
+    perror("lsh");
+  
+    return 1;
+}
+
+// the echo command
+int lsh_echo(char **args)
+{
+  int i = 1;
+  while(args[i] != NULL){
+    printf("%s ", args[i]);
+    i++;
+  }
+
+  printf("\n");
+  return 1;
+}
+
+// the env command
+int lsh_env(char **args)
+{
+  int i = 0;
+  while(environ[i] != NULL){
+    printf("%s\n", environ[i]);
+    i++;
+  }
+
+  return 1;
+}
+
+
+
 /**
   @brief Launch a program and wait for it to terminate.
   @param args Null terminated list of arguments (including program).
@@ -122,7 +175,7 @@ int lsh_launch(char **args)
   }
 
   return 1;
-}
+} 
 
 /**
    @brief Execute shell built-in or launch program.
@@ -139,7 +192,10 @@ int lsh_execute(char **args)
   }
 
   for (i = 0; i < lsh_num_builtins(); i++) {
+
+    // to compare the first argument with the list of built-in commands
     if (strcmp(args[0], builtin_str[i]) == 0) {
+      
       return (*builtin_func[i])(args);
     }
   }
