@@ -17,6 +17,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#define HISTORY_SIZE 100
+char *history[HISTORY_SIZE];
+int history_count = 0;
+
 extern char **environ;
 
 /*
@@ -29,6 +33,7 @@ int lsh_exit(char **args);
 int lsh_pwd(char **args);
 int lsh_echo(char **args);
 int lsh_env(char **args);
+int lsh_history(char **args);
 
 
 /*
@@ -40,7 +45,8 @@ char *builtin_str[] = {
   "exit", 
   "pwd",
   "echo",
-  "env"
+  "env",
+  "history"
 };
 
 int (*builtin_func[]) (char **) = {
@@ -49,7 +55,8 @@ int (*builtin_func[]) (char **) = {
   &lsh_exit,
   &lsh_pwd, 
   &lsh_echo,
-  &lsh_env
+  &lsh_env,
+  &lsh_history
 };
 
 int lsh_num_builtins() {
@@ -112,6 +119,10 @@ int lsh_exit(char **args)
 int lsh_pwd(char **args)
 {
   char cwd[1024];
+
+  if(args[1] != NULL)
+    fprintf(stderr, "lsh: pwd takes no arguments\n");
+
   if(getcwd(cwd, sizeof(cwd)) != NULL)
     printf("%s\n", cwd);
   else
@@ -136,6 +147,9 @@ int lsh_echo(char **args)
 // the env command
 int lsh_env(char **args)
 {
+  if(args[1] != NULL)
+    fprintf(stderr, "lsh: env takes no arguments\n");
+
   int i = 0;
   while(environ[i] != NULL){
     printf("%s\n", environ[i]);
@@ -143,6 +157,15 @@ int lsh_env(char **args)
   }
 
   return 1;
+}
+
+// the history command
+int lsh_history(char **args)
+{
+  for(int i = 0; i < history_count; i++)
+    printf("%d %s\n", i + 1, history[i]);
+  
+    return 1;
 }
 
 
@@ -311,7 +334,14 @@ void lsh_loop(void)
 
   do {
     printf("> ");
+
     line = lsh_read_line();
+
+    if(history_count < HISTORY_SIZE){
+      history[history_count] = strdup(line);
+      history_count++;
+    }
+
     args = lsh_split_line(line);
     status = lsh_execute(args);
 
@@ -334,6 +364,9 @@ int main(int argc, char **argv)
   lsh_loop();
 
   // Perform any shutdown/cleanup.
+
+  for(int i = 0; i < history_count; i++)
+    free(history[i]);
 
   return EXIT_SUCCESS;
 }
